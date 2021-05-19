@@ -8,16 +8,11 @@ import {
   ExpansionPanel,
   ExpansionPanelDetails,
   ExpansionPanelSummary,
-  Switch,
-  Select,
-  MenuItem,
-  FormControl
 } from '@material-ui/core';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import { withNamespaces } from 'react-i18next';
 import { colors } from '../../theme'
 
-import BuiltWithModal from '../builtwith/builtwithModal.jsx'
 import UnlockModal from '../unlock/unlockModal.jsx'
 import Snackbar from '../snackbar'
 import Loader from '../loader'
@@ -29,7 +24,11 @@ import {
   GET_INSURANCE_BALANCES_RETURNED,
   CONNECTION_CONNECTED,
   CONNECTION_DISCONNECTED,
-  GET_ETH_PRICE
+  GET_ETH_PRICE,
+  BUY_INSURANCE_RETURNED,
+  MINT_INSURANCE_RETURNED,
+  GET_ETH_BALANCE,
+  GET_ETH_BALANCE_RETURNED
 } from '../../constants'
 
 import Store from "../../stores";
@@ -42,10 +41,11 @@ const styles = theme => ({
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    maxWidth: '1200px',
+    maxWidth: '900px',
     width: '100%',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    marginTop: '40px'
   },
   insuranceContainer: {
     display: 'flex',
@@ -53,7 +53,6 @@ const styles = theme => ({
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '12px',
     minWidth: '100%',
     [theme.breakpoints.up('md')]: {
       minWidth: '900px',
@@ -65,6 +64,7 @@ const styles = theme => ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingBottom: '32px'
   },
   introCenter: {
     maxWidth: '500px',
@@ -73,6 +73,7 @@ const styles = theme => ({
     padding: '48px 0px'
   },
   introText: {
+    flex: 1
   },
   placeholder: {
     display: 'none',
@@ -84,19 +85,22 @@ const styles = theme => ({
   addressContainer: {
     display: 'flex',
     justifyContent: 'space-between',
-    maxWidth: '100px',
     overflow: 'hidden',
+    flex: 1,
     whiteSpace: 'nowrap',
     fontSize: '0.83rem',
     textOverflow:'ellipsis',
     cursor: 'pointer',
-    padding: '10px',
-    borderRadius: '0.75rem',
-    height: 'max-content',
+    padding: '28px 30px',
+    borderRadius: '50px',
+    border: '1px solid '+colors.borderBlue,
+    alignItems: 'center',
     [theme.breakpoints.up('md')]: {
-      maxWidth: '130px',
       width: '100%'
     }
+  },
+  between: {
+    width: '40px'
   },
   connectContainer: {
     padding: '12px',
@@ -175,6 +179,25 @@ const styles = theme => ({
       marginRight: '24px',
     }
   },
+  disaclaimer: {
+    padding: '12px',
+    border: '1px solid rgb(174, 174, 174)',
+    borderRadius: '0.75rem',
+    marginBottom: '24px',
+  },
+  walletAddress: {
+    padding: '0px 12px'
+  },
+  walletTitle: {
+    flex: 1,
+    color: colors.darkGray
+  },
+  grey: {
+    color: colors.darkGray
+  },
+  actualIntro: {
+    paddingBottom: '20px'
+  }
 });
 
 class Insure extends Component {
@@ -182,50 +205,93 @@ class Insure extends Component {
   constructor(props) {
     super()
 
+    const account = store.getStore('account')
+
     this.state = {
       assets: store.getStore('insuranceAssets'),
-      account: store.getStore('account'),
-      languages: store.getStore('languages'),
-      language: 'en',
+      account: account,
       modalOpen: false,
       modalInvestAllOpen: false,
       snackbarType: null,
       snackbarMessage: null,
+      expanded: 'oCurve.fi'
+    }
+
+    if(account && account.address) {
+      dispatcher.dispatch({ type: GET_INSURANCE_BALANCES, content: {} });
+      dispatcher.dispatch({ type: GET_ETH_BALANCE, content: {} });
+      dispatcher.dispatch({ type: GET_ETH_PRICE, content: {} });
     }
   }
   componentWillMount() {
     emitter.on(ERROR, this.errorReturned);
     emitter.on(GET_INSURANCE_BALANCES_RETURNED, this.balancesReturned);
+    emitter.on(GET_ETH_BALANCE_RETURNED, this.ethBalanceReturned);
     emitter.on(CONNECTION_CONNECTED, this.connectionConnected);
     emitter.on(CONNECTION_DISCONNECTED, this.connectionDisconnected);
+    emitter.on(BUY_INSURANCE_RETURNED, this.buyInsuranceReturned);
+    emitter.on(MINT_INSURANCE_RETURNED, this.mintInsuranceReturned);
   }
 
   componentWillUnmount() {
     emitter.removeListener(ERROR, this.errorReturned);
     emitter.removeListener(GET_INSURANCE_BALANCES_RETURNED, this.balancesReturned);
+    emitter.removeListener(GET_ETH_BALANCE_RETURNED, this.ethBalanceReturned);
     emitter.removeListener(CONNECTION_CONNECTED, this.connectionConnected);
     emitter.removeListener(CONNECTION_DISCONNECTED, this.connectionDisconnected);
+    emitter.removeListener(BUY_INSURANCE_RETURNED, this.buyInsuranceReturned);
+    emitter.removeListener(MINT_INSURANCE_RETURNED, this.mintInsuranceReturned);
   };
 
   refresh() {
     dispatcher.dispatch({ type: GET_INSURANCE_BALANCES, content: {} });
+    dispatcher.dispatch({ type: GET_ETH_BALANCE, content: {} });
     dispatcher.dispatch({ type: GET_ETH_PRICE, content: {} });
   }
 
+  mintInsuranceReturned = (txHash) => {
+    const snackbarObj = { snackbarMessage: null, snackbarType: null }
+    this.setState(snackbarObj)
+    this.setState({ loading: false })
+    const that = this
+    setTimeout(() => {
+      const snackbarObj = { snackbarMessage: txHash, snackbarType: 'Hash' }
+      that.setState(snackbarObj)
+    })
+  };
+
+  buyInsuranceReturned = (txHash) => {
+    const snackbarObj = { snackbarMessage: null, snackbarType: null }
+    this.setState(snackbarObj)
+    this.setState({ loading: false })
+    const that = this
+    setTimeout(() => {
+      const snackbarObj = { snackbarMessage: txHash, snackbarType: 'Hash' }
+      that.setState(snackbarObj)
+    })
+  };
+
   balancesReturned = (balances) => {
     this.setState({ assets: store.getStore('insuranceAssets') })
-    setTimeout(this.refresh,15000);
+    setTimeout(this.refresh, 300000);
+  };
+
+  ethBalanceReturned = (balances) => {
+    this.setState({ ethBalance: store.getStore('ethBalance') })
   };
 
   connectionConnected = () => {
     this.setState({ account: store.getStore('account') })
 
+    const { t } = this.props
+
     dispatcher.dispatch({ type: GET_INSURANCE_BALANCES, content: {} });
+    dispatcher.dispatch({ type: GET_ETH_BALANCE, content: {} });
     dispatcher.dispatch({ type: GET_ETH_PRICE, content: {} });
 
     const that = this
     setTimeout(() => {
-      const snackbarObj = { snackbarMessage: 'Wallet succesfully connected.', snackbarType: 'Info' }
+      const snackbarObj = { snackbarMessage: t("Unlock.WalletConnected"), snackbarType: 'Info' }
       that.setState(snackbarObj)
     })
   };
@@ -252,8 +318,6 @@ class Insure extends Component {
       account,
       modalOpen,
       snackbarMessage,
-      languages,
-      language
     } = this.state
 
     var address = null;
@@ -264,24 +328,31 @@ class Insure extends Component {
     return (
       <div className={ classes.root }>
         <div className={ classes.insuranceContainer }>
-          { account.address &&
+        <Typography variant={'h5'} className={ classes.disaclaimer }>This project is in beta. Use at your own risk.</Typography>
+        { (account && account.address) &&
             <div className={ classes.intro }>
               <div className={ classes.placeholder }>
               </div>
-              <Typography variant='h2' className={ classes.introText }>{ t('Insure.Intro') }</Typography>
+              <Typography variant='h3' className={ classes.introText }></Typography>
               <Card className={ classes.addressContainer } onClick={this.overlayClicked}>
-                <Typography variant={ 'h5'} noWrap>{ address }</Typography>
+                <Typography variant={ 'h3'} className={ classes.walletTitle } noWrap>Wallet</Typography>
+                <Typography variant={ 'h4'} className={ classes.walletAddress } noWrap>{ address }</Typography>
                 <div style={{ background: '#DC6BE5', opacity: '1', borderRadius: '10px', width: '10px', height: '10px', marginRight: '3px', marginTop:'3px', marginLeft:'6px' }}></div>
               </Card>
             </div>
           }
-          { !account.address &&
+          { (account && account.address) &&
+            <div className={ classes.actualIntro }>
+              <Typography variant='h3'>{ t('Zap.Intro') }</Typography>
+            </div>
+          }
+          { (!account || !account.address) &&
             <div className={ classes.introCenter }>
-              <Typography variant='h2'>{ t('Insure.Intro') }</Typography>
+              <Typography variant='h3'>{ t('Insure.Intro') }</Typography>
             </div>
           }
 
-          {!account.address &&
+          { (!account || !account.address) &&
             <div className={ classes.connectContainer }>
               <Button
                 className={ classes.actionButton }
@@ -294,7 +365,7 @@ class Insure extends Component {
               </Button>
             </div>
           }
-          { account.address && this.renderAssetBlocks() }
+          { (account && account.address) && this.renderAssetBlocks() }
         </div>
         { loading && <Loader /> }
         { modalOpen && this.renderModal() }
@@ -334,25 +405,17 @@ class Insure extends Component {
                 </div>
                 <div>
                   <Typography variant={ 'h3' }>{ asset.name }</Typography>
-                  <Typography variant={ 'h5' }>{ asset.description }</Typography>
+                  <Typography variant={ 'h5' } className={ classes.grey }>{ asset.description }</Typography>
                 </div>
               </div>
               <div className={classes.heading}>
                 <Typography variant={ 'h3' }>{ (asset.balance ? (asset.balance).toFixed(4) : '0.0000')+' '+( asset.tokenSymbol ? asset.tokenSymbol : asset.symbol ) }</Typography>
-                <Typography variant={ 'h5' }>{ t('Insure.Balance') }</Typography>
+                <Typography variant={ 'h5' } className={ classes.grey }>{ t('Insure.Balance') }</Typography>
               </div>
               <div className={classes.heading}>
                 <Typography variant={ 'h3' }>{ (asset.balance > 0 ? (asset.insuredBalance  * 100 / (asset.insuredBalance + asset.balance)).toFixed(4) : '0.0000')+' %'}</Typography>
-                <Typography variant={ 'h5' }>{ t('Insure.Insured') }</Typography>
+                <Typography variant={ 'h5' } className={ classes.grey }>{ t('Insure.Insured') }</Typography>
               </div>
-              { /* <div className={classes.heading}>
-                <Typography variant={ 'h3' }>{ (asset.maxApr*100).toFixed(4)+' %'}</Typography>
-                <Typography variant={ 'h5' }>{ t('Insure.UninsuredYield') }</Typography>
-              </div>
-              <div className={classes.heading}>
-                <Typography variant={ 'h3' }>{ (asset.insuredApr*100).toFixed(4)+' %'}</Typography>
-                <Typography variant={ 'h5' }>{ t('Insure.InsuredYield') }</Typography>
-              </div> */}
             </div>
           </ExpansionPanelSummary>
           <ExpansionPanelDetails>

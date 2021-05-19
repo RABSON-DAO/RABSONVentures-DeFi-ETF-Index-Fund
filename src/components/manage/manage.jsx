@@ -2,12 +2,11 @@ import React, { Component } from "react";
 import { withRouter } from "react-router-dom";
 import { withStyles } from '@material-ui/core/styles';
 import {
-  Card,
   Typography,
   Button,
-  ExpansionPanel,
-  ExpansionPanelDetails,
-  ExpansionPanelSummary,
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
 } from '@material-ui/core';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 
@@ -22,10 +21,6 @@ import {
   BALANCES_RETURNED,
   DONATE_RETURNED,
   REBALANCE_RETURNED,
-  CONNECT_METAMASK,
-  LEDGER_CONNECTED,
-  CONNECT_METAMASK_PASSIVE,
-  METAMASK_CONNECTED,
   CONNECTION_CONNECTED,
   CONNECTION_DISCONNECTED
 } from '../../constants'
@@ -43,14 +38,11 @@ const styles = theme => ({
   root: {
     flex: 1,
     display: 'flex',
+    flexDirection: 'column',
     maxWidth: '1200px',
     width: '100%',
-    justifyContent: 'center',
-    marginTop: '60px',
-    [theme.breakpoints.up('md')]: {
-      alignItems: 'center',
-      marginTop: '0px',
-    }
+    justifyContent: 'flex-start',
+    alignItems: 'center'
   },
   value: {
     cursor: 'pointer'
@@ -87,7 +79,7 @@ const styles = theme => ({
     display: 'flex',
     justifyContent: 'space-between',
     width: '100%',
-    maxWidth: '900px',
+    maxWidth: '1200px',
     [theme.breakpoints.up('md')]: {
       width: '750px',
     }
@@ -106,9 +98,9 @@ const styles = theme => ({
     width: '100%',
     position: 'relative',
     display: 'flex',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingLeft: '38%'
+    paddingTop: '24px'
   },
   introCenter: {
     maxWidth: '500px',
@@ -222,14 +214,15 @@ const styles = theme => ({
       maxWidth: '150px',
     }
   },
+  accordionRoot: {
+    width: '1200px'
+  }
 });
 
 class Manage extends Component {
 
   constructor() {
     super()
-
-    // dispatcher.dispatch({ type: CONNECT_METAMASK_PASSIVE, content: {} })
 
     this.state = {
       assets: store.getStore('assets'),
@@ -350,25 +343,18 @@ class Manage extends Component {
       modalOpen,
       snackbarMessage
     } = this.state
-    var address = null;
-    if (account.address) {
-      address = account.address.substring(0,6)+'...'+account.address.substring(account.address.length-4,account.address.length)
-    }
+
     return (
       <div className={ classes.root }>
         <div className={ classes.investedContainer }>
           { account.address &&
             <div className={ classes.intro }>
-              <Typography variant='h2'>Management. Simplified.</Typography>
-              <Card className={ classes.addressContainer } onClick={this.overlayClicked}>
-                <Typography variant={ 'h5'} noWrap>{ address }</Typography>
-                <div style={{ background: '#DC6BE5', opacity: '1', borderRadius: '10px', width: '10px', height: '10px', marginRight: '3px', marginTop:'3px', marginLeft:'6px' }}></div>
-              </Card>
+              <Typography variant='h3'>Management. You should probably not be here.</Typography>
             </div>
           }
           { !account.address &&
             <div className={ classes.introCenter }>
-              <Typography variant='h2'>Management. Simplified.</Typography>
+              <Typography variant='h3'>Management. Simplified.</Typography>
             </div>
           }
           <div className={ classes.balancesContainer }>
@@ -394,13 +380,6 @@ class Manage extends Component {
           { account.address && this.renderAssetBlocks() }
         </div>
         { loading && <Loader /> }
-        <div className={classes.footer}>
-          <Typography onClick={()=> window.open("https://docs.iearn.finance", "_blank")} className={ classes.footerText } variant={ 'h6'}>about</Typography>
-          <Typography onClick={()=> window.open("https://docs.iearn.finance", "_blank")} className={ classes.footerText } variant={ 'h6'}>docs</Typography>
-          <Typography onClick={()=> window.open("https://github.com/iearn-finance", "_blank")} className={ classes.footerText } variant={ 'h6'}>code</Typography>
-          <Typography onClick={()=> window.open("https://t.me/iearnfinance", "_blank")} className={ classes.footerText } variant={ 'h6'}>telegram</Typography>
-          <Typography onClick={()=> window.open("/apr", "_blank")} className={ classes.footerText } variant={ 'h6'}>yield</Typography>
-        </div>
         { modalOpen && this.renderModal() }
         { snackbarMessage && this.renderSnackbar() }
       </div>
@@ -416,8 +395,8 @@ class Manage extends Component {
 
     return assets.map((asset) => {
       return (
-        <ExpansionPanel square key={ asset.symbol+"_expand" } expanded={ expanded === asset.symbol} onChange={ () => { this.handleChange(asset.symbol) } }>
-          <ExpansionPanelSummary
+        <Accordion square key={ asset.symbol+"_expand" } expanded={ expanded === asset.symbol} onChange={ () => { this.handleChange(asset.symbol) } } className={ classes.accordionRoot } >
+          <AccordionSummary
             expandIcon={<ExpandMoreIcon />}
             aria-controls="panel1bh-content"
             id="panel1bh-header"
@@ -447,11 +426,11 @@ class Manage extends Component {
                 <Typography className={classes.heading} variant={ 'h5' }>{'Pool Balance'}</Typography>
               </div>
             </div>
-          </ExpansionPanelSummary>
-          <ExpansionPanelDetails>
+          </AccordionSummary>
+          <AccordionDetails>
             <Asset asset={ asset } startLoading={ this.startLoading } />
-          </ExpansionPanelDetails>
-        </ExpansionPanel>
+          </AccordionDetails>
+        </Accordion>
       )
     })
   }
@@ -471,11 +450,6 @@ class Manage extends Component {
     } = this.state
     return <Snackbar type={ snackbarType } message={ snackbarMessage } open={true}/>
   };
-
-  unlockMetamask = () => {
-    this.setState({ metamaskLoading: true })
-    dispatcher.dispatch({ type: CONNECT_METAMASK, content: {} })
-  }
 
   renderModal = () => {
     return (

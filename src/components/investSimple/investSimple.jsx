@@ -2,32 +2,29 @@ import React, { Component } from "react";
 import { withRouter } from "react-router-dom";
 import { withStyles } from '@material-ui/core/styles';
 import {
-  Card,
   Typography,
-  Button,
-  ExpansionPanel,
-  ExpansionPanelDetails,
-  ExpansionPanelSummary,
-  Switch
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
 } from '@material-ui/core';
+// import ToggleButton from '@material-ui/lab/ToggleButton';
+// import ToggleButtonGroup from '@material-ui/lab/ToggleButtonGroup';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import { withNamespaces } from 'react-i18next';
 import { colors } from '../../theme'
 
-import InvestAllModal from './investAllModal.jsx'
-import UnlockModal from '../unlock/unlockModal.jsx'
 import Snackbar from '../snackbar'
 import Asset from './asset'
 import Loader from '../loader'
 
 import {
   ERROR,
-  GET_BALANCES,
-  BALANCES_RETURNED,
+  GET_BALANCES_LIGHT,
+  BALANCES_LIGHT_RETURNED,
   INVEST_RETURNED,
   REDEEM_RETURNED,
   CONNECTION_CONNECTED,
-  CONNECTION_DISCONNECTED
+  CONNECTION_DISCONNECTED,
 } from '../../constants'
 
 import Store from "../../stores";
@@ -42,19 +39,34 @@ const styles = theme => ({
     flexDirection: 'column',
     maxWidth: '1200px',
     width: '100%',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center'
+  },
+  investedContainerLoggedOut: {
+    display: 'flex',
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: '100%',
+    marginTop: '40px',
+    [theme.breakpoints.up('md')]: {
+      minWidth: '900px',
+    }
   },
   investedContainer: {
     display: 'flex',
     flex: 1,
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: '12px',
+    justifyContent: 'flex-start',
     minWidth: '100%',
+    marginTop: '40px',
     [theme.breakpoints.up('md')]: {
-      minWidth: '800px',
+      minWidth: '900px',
+    },
+    [theme.breakpoints.down('sm')]: {
+      marginTop: '100px',
     }
   },
   balancesContainer: {
@@ -82,12 +94,15 @@ const styles = theme => ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    [theme.breakpoints.down('sm')]: {
+      flexDirection: 'column-reverse',
+    }
   },
   introCenter: {
     maxWidth: '500px',
     textAlign: 'center',
     display: 'flex',
-    padding: '48px 0px'
+    padding: '24px 0px'
   },
   introText: {
     paddingLeft: '20px'
@@ -98,7 +113,6 @@ const styles = theme => ({
     },
     padding: '12px',
     backgroundColor: "#2F80ED",
-    borderRadius: '1rem',
     border: '1px solid #E1E1E1',
     fontWeight: 500,
     [theme.breakpoints.up('md')]: {
@@ -179,19 +193,26 @@ const styles = theme => ({
   addressContainer: {
     display: 'flex',
     justifyContent: 'space-between',
-    maxWidth: '100px',
     overflow: 'hidden',
+    flex: 1,
     whiteSpace: 'nowrap',
     fontSize: '0.83rem',
     textOverflow:'ellipsis',
     cursor: 'pointer',
-    padding: '10px',
-    borderRadius: '0.75rem',
-    height: 'max-content',
+    padding: '28px 30px',
+    borderRadius: '50px',
+    border: '1px solid '+colors.borderBlue,
+    alignItems: 'center',
+    maxWidth: 'calc(100vw - 24px)',
+    width: '100%',
     [theme.breakpoints.up('md')]: {
-      maxWidth: '130px',
-      width: '100%'
+      width: '100%',
+      maxWidth: 'auto'
     }
+  },
+  between: {
+    width: '40px',
+    height: '40px'
   },
   expansionPanel: {
     maxWidth: 'calc(100vw - 24px)',
@@ -213,7 +234,24 @@ const styles = theme => ({
     display: 'flex',
     justifyContent: 'flex-end',
     width: '100%'
-  }
+  },
+  disaclaimer: {
+    padding: '12px',
+    border: '1px solid rgb(174, 174, 174)',
+    borderRadius: '0.75rem',
+    marginBottom: '24px',
+    background: colors.white
+  },
+  walletAddress: {
+    padding: '0px 12px'
+  },
+  walletTitle: {
+    flex: 1,
+    color: colors.darkGray
+  },
+  grey: {
+    color: colors.darkGray
+  },
 });
 
 class InvestSimple extends Component {
@@ -221,22 +259,25 @@ class InvestSimple extends Component {
   constructor(props) {
     super()
 
+    const account = store.getStore('account')
     this.state = {
       assets: store.getStore('assets'),
-      account: store.getStore('account'),
-      modalOpen: false,
-      modalBuiltWithOpen: false,
-      modalInvestAllOpen: false,
+      account: account,
       snackbarType: null,
       snackbarMessage: null,
-      hideV1: true
+      hideV1: true,
+      value: 1,
+    }
+
+    if(account && account.address) {
+      dispatcher.dispatch({ type: GET_BALANCES_LIGHT, content: {} })
     }
   }
   componentWillMount() {
     emitter.on(INVEST_RETURNED, this.investReturned);
     emitter.on(REDEEM_RETURNED, this.redeemReturned);
     emitter.on(ERROR, this.errorReturned);
-    emitter.on(BALANCES_RETURNED, this.balancesReturned);
+    emitter.on(BALANCES_LIGHT_RETURNED, this.balancesReturned);
     emitter.on(CONNECTION_CONNECTED, this.connectionConnected);
     emitter.on(CONNECTION_DISCONNECTED, this.connectionDisconnected);
 
@@ -248,27 +289,33 @@ class InvestSimple extends Component {
     emitter.removeListener(ERROR, this.errorReturned);
     emitter.removeListener(CONNECTION_CONNECTED, this.connectionConnected);
     emitter.removeListener(CONNECTION_DISCONNECTED, this.connectionDisconnected);
-
-    emitter.removeListener(BALANCES_RETURNED, this.balancesReturned);
+    emitter.removeListener(BALANCES_LIGHT_RETURNED, this.balancesReturned);
   };
 
   refresh() {
-    dispatcher.dispatch({ type: GET_BALANCES, content: {} })
+    dispatcher.dispatch({ type: GET_BALANCES_LIGHT, content: {} })
   }
 
   balancesReturned = (balances) => {
-    this.setState({ assets: store.getStore('assets') })
-    setTimeout(this.refresh,5000);
+    this.setState({
+      assets: store.getStore('assets'),
+      loading: false
+    })
+    setTimeout(this.refresh, 300000);
   };
 
   connectionConnected = () => {
-    this.setState({ account: store.getStore('account') })
+    const { t } = this.props
+    this.setState({
+      account: store.getStore('account'),
+      loading: true
+    })
 
-    dispatcher.dispatch({ type: GET_BALANCES, content: {} })
+    dispatcher.dispatch({ type: GET_BALANCES_LIGHT, content: {} })
 
     const that = this
     setTimeout(() => {
-      const snackbarObj = { snackbarMessage: 'Wallet succesfully connected.', snackbarType: 'Info' }
+      const snackbarObj = { snackbarMessage: t("Unlock.WalletConnected"), snackbarType: 'Info' }
       that.setState(snackbarObj)
     })
   };
@@ -311,78 +358,57 @@ class InvestSimple extends Component {
   };
 
   render() {
-    const { classes, t } = this.props;
+    const { classes } = this.props;
     const {
       loading,
       account,
-      modalOpen,
-      modalBuiltWithOpen,
-      modalInvestAllOpen,
       snackbarMessage,
-      hideV1,
+      value,
     } = this.state
-    var address = null;
-    if (account.address) {
-      address = account.address.substring(0,6)+'...'+account.address.substring(account.address.length-4,account.address.length)
+
+    if(!account || !account.address) {
+      return (
+        <div className={ classes.root }>
+          <div className={ classes.investedContainerLoggedOut }>
+          <Typography variant={'h5'} className={ classes.disaclaimer }>This project is in beta. Use at your own risk.</Typography>
+            <div className={ classes.introCenter }>
+              <Typography variant='h3'>Connect your wallet to continue</Typography>
+            </div>
+          </div>
+          { snackbarMessage && this.renderSnackbar() }
+        </div>
+      )
     }
+
     return (
       <div className={ classes.root }>
         <div className={ classes.investedContainer }>
-          { account.address &&
-            <div className={ classes.intro }>
-              { account.address && <div className={ classes.versionToggle }>
-                <Switch
-                  id='hideV1'
-                  checked={ hideV1 }
-                  onChange={ this.onChange }
-                  value={ 'hideV1' } />
-                <Typography variant={ 'h6'}>{ t('InvestSimple.Show') }</Typography>
-              </div> }
-              <Typography variant='h2' className={ classes.introText }>{ t('InvestSimple.Intro') }</Typography>
-              <Card className={ classes.addressContainer } onClick={this.overlayClicked}>
-                <Typography variant={ 'h5'} noWrap>{ address }</Typography>
-                <div style={{ background: '#DC6BE5', opacity: '1', borderRadius: '10px', width: '10px', height: '10px', marginRight: '3px', marginTop:'3px', marginLeft:'6px' }}></div>
-              </Card>
-            </div>
-          }
-          { !account.address &&
-            <div className={ classes.introCenter }>
-              <Typography variant='h2'>{ t('InvestSimple.Intro') }</Typography>
-            </div>
-          }
-
-          {!account.address &&
-            <div className={ classes.connectContainer }>
-              <Button
-                className={ classes.actionButton }
-                variant="outlined"
-                color="primary"
-                disabled={ loading }
-                onClick={ this.overlayClicked }
-                >
-                <Typography className={ classes.buttonText } variant={ 'h5'}>{ t('InvestSimple.Connect') }</Typography>
-              </Button>
-            </div>
-          }
-          { account.address && this.renderAssetBlocks() }
-          {/* account.address && <div className={ classes.investAllContainer }>
-            <Button
-              className={ classes.actionButton }
-              variant="outlined"
-              color="primary"
-              disabled={ loading }
-              onClick={ this.investAllClicked }
-              >
-              <Typography className={ classes.buttonText } variant={ 'h5'}>{ 'Earn All' }</Typography>
-            </Button>
+          {/* <Typography variant={'h5'} className={ classes.disaclaimer }>This project is in beta. Use at your own risk.</Typography>
+          <div className={ classes.intro }>
+            <ToggleButtonGroup value={value} onChange={this.handleTabChange} aria-label="version" exclusive size={ 'small' }>
+              <ToggleButton value={0} aria-label="v1">
+                <Typography variant={ 'h4' }>v1</Typography>
+              </ToggleButton>
+              <ToggleButton value={1} aria-label="v2">
+                <Typography variant={ 'h4' }>y.curve.fi</Typography>
+              </ToggleButton>
+              <ToggleButton value={2} aria-label="v3">
+                <Typography variant={ 'h4' }>busd.curve.fi</Typography>
+              </ToggleButton>
+            </ToggleButtonGroup>
           </div> */}
+          { account.address && value === 0 && this.renderAssetBlocksv1() }
+          { account.address && value === 1 && this.renderAssetBlocksv2() }
+          { account.address && value === 2 && this.renderAssetBlocksv3() }
         </div>
         { loading && <Loader /> }
-        { modalOpen && this.renderModal() }
-        { modalInvestAllOpen && this.renderInvestAllModal() }
         { snackbarMessage && this.renderSnackbar() }
       </div>
     )
+  };
+
+  handleTabChange = (event, newValue) => {
+    this.setState({value:newValue})
   };
 
   onChange = (event) => {
@@ -391,7 +417,7 @@ class InvestSimple extends Component {
     this.setState(val)
   };
 
-  renderAssetBlocks = () => {
+  renderAssetBlocksv1 = () => {
     const { assets, expanded, hideV1 } = this.state
     const { classes, t } = this.props
     const width = window.innerWidth
@@ -399,13 +425,13 @@ class InvestSimple extends Component {
     return assets.filter((asset) => {
       return (hideV1 === true || asset.version !== 1)
     }).filter((asset) => {
-      return asset.version == 2 || (asset.version == 1 && (asset.investedBalance).toFixed(4) > 0)
+      return (asset.version === 1 && asset.investedBalance && (asset.investedBalance).toFixed(4) > 0)
     }).filter((asset) => {
-      return !(asset.symbol == "iDAI")
+      return !(asset.symbol === "iDAI")
     }).map((asset) => {
       return (
-        <ExpansionPanel className={ classes.expansionPanel } square key={ asset.id+"_expand" } expanded={ expanded === asset.id} onChange={ () => { this.handleChange(asset.id) } }>
-          <ExpansionPanelSummary
+        <Accordion className={ classes.expansionPanel } square key={ asset.id+"_expand" } expanded={ expanded === asset.id} onChange={ () => { this.handleChange(asset.id) } }>
+          <AccordionSummary
             expandIcon={<ExpandMoreIcon />}
             aria-controls="panel1bh-content"
             id="panel1bh-header"
@@ -422,23 +448,158 @@ class InvestSimple extends Component {
                 </div>
                 <div>
                   <Typography variant={ 'h3' }>{ asset.name }</Typography>
-                  <Typography variant={ 'h5' }>{ asset.version == 1?asset.description+' - v'+asset.version+'':asset.description }</Typography>
+                  <Typography variant={ 'h5' } className={ classes.grey }>{ asset.description }</Typography>
                 </div>
               </div>
               <div className={classes.heading}>
-                <Typography variant={ 'h3' }>{ (asset.maxApr*100).toFixed(4) + ' %' }</Typography>
-                <Typography variant={ 'h5' }>{ t('InvestSimple.InterestRate') }</Typography>
+                <Typography variant={ 'h3' }>
+                  {
+                    asset.maxApr
+                      ? (asset.maxApr * 100).toFixed(4) + ' %'
+                      : '0.0000 %'
+                  }
+                </Typography>
+                <Typography variant={ 'h5' } className={ classes.grey }>{ t('InvestSimple.InterestRate') }</Typography>
               </div>
               <div className={classes.heading}>
-                <Typography variant={ 'h3' }>{(asset.balance).toFixed(4)+' '+( asset.tokenSymbol ? asset.tokenSymbol : asset.symbol )}</Typography>
-                <Typography variant={ 'h5' }>{ t('InvestSimple.AvailableBalance') }</Typography>
+                <Typography variant={ 'h3' }>
+                  {
+                    asset.balance
+                      ? (asset.balance).toFixed(4) + ' ' + (asset.tokenSymbol ? asset.tokenSymbol : asset.symbol)
+                      : '0.0000 ' + (asset.tokenSymbol ? asset.tokenSymbol : asset.symbol)
+                  }
+                </Typography>
+                <Typography variant={ 'h5' } className={ classes.grey }>{ t('InvestSimple.AvailableBalance') }</Typography>
               </div>
             </div>
-          </ExpansionPanelSummary>
-          <ExpansionPanelDetails>
+          </AccordionSummary>
+          <AccordionDetails>
             <Asset asset={ asset } startLoading={ this.startLoading } />
-          </ExpansionPanelDetails>
-        </ExpansionPanel>
+          </AccordionDetails>
+        </Accordion>
+      )
+    })
+  }
+
+  renderAssetBlocksv2 = () => {
+    const { assets, expanded } = this.state
+    const { classes, t } = this.props
+    const width = window.innerWidth
+    return assets.filter((asset) => {
+      return (asset.version === 2)
+    }).filter((asset) => {
+      return !(asset.symbol === "iDAI")
+    }).map((asset) => {
+      return (
+        <Accordion className={ classes.expansionPanel } square key={ asset.id+"_expand" } expanded={ expanded === asset.id} onChange={ () => { this.handleChange(asset.id) } }>
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            aria-controls="panel1bh-content"
+            id="panel1bh-header"
+          >
+            <div className={ classes.assetSummary }>
+              <div className={classes.headingName}>
+                <div className={ classes.assetIcon }>
+                  <img
+                    alt=""
+                    src={ require('../../assets/'+asset.symbol+'-logo.png') }
+                    height={ width > 600 ? '40px' : '30px'}
+                    style={asset.disabled?{filter:'grayscale(100%)'}:{}}
+                  />
+                </div>
+                <div>
+                  <Typography variant={ 'h3' }>{ asset.name }</Typography>
+                  <Typography variant={ 'h5' } className={ classes.grey }>{ asset.description }</Typography>
+                </div>
+              </div>
+              <div className={classes.heading}>
+                <Typography variant={ 'h3' }>
+                  {
+                    asset.maxApr
+                      ? (asset.maxApr * 100).toFixed(4) + ' %'
+                      : '0.0000 %'
+                  }
+                </Typography>
+                <Typography variant={ 'h5' } className={ classes.grey }>{ t('InvestSimple.InterestRate') }</Typography>
+              </div>
+              <div className={classes.heading}>
+                <Typography variant={ 'h3' }>
+                  {
+                    asset.balance
+                      ? (asset.balance).toFixed(4) + ' ' + (asset.tokenSymbol ? asset.tokenSymbol : asset.symbol)
+                      : '0.0000 ' + (asset.tokenSymbol ? asset.tokenSymbol : asset.symbol)
+                  }
+                </Typography>
+                <Typography variant={ 'h5' } className={ classes.grey }>{ t('InvestSimple.AvailableBalance') }</Typography>
+              </div>
+            </div>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Asset asset={ asset } startLoading={ this.startLoading } />
+          </AccordionDetails>
+        </Accordion>
+      )
+    })
+  }
+
+  renderAssetBlocksv3 = () => {
+    const { assets, expanded } = this.state
+    const { classes, t } = this.props
+    const width = window.innerWidth
+
+    return assets.filter((asset) => {
+      return (asset.version === 3)
+    }).filter((asset) => {
+      return !(asset.symbol === "iDAI")
+    }).map((asset) => {
+      return (
+        <Accordion className={ classes.expansionPanel } square key={ asset.id+"_expand" } expanded={ expanded === asset.id} onChange={ () => { this.handleChange(asset.id) } }>
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            aria-controls="panel1bh-content"
+            id="panel1bh-header"
+          >
+            <div className={ classes.assetSummary }>
+              <div className={classes.headingName}>
+                <div className={ classes.assetIcon }>
+                  <img
+                    alt=""
+                    src={ require('../../assets/'+asset.symbol+'-logo.png') }
+                    height={ width > 600 ? '40px' : '30px'}
+                    style={asset.disabled?{filter:'grayscale(100%)'}:{}}
+                  />
+                </div>
+                <div>
+                  <Typography variant={ 'h3' }>{ asset.name }</Typography>
+                  <Typography variant={ 'h5' } className={ classes.grey }>{ asset.description }</Typography>
+                </div>
+              </div>
+              <div className={classes.heading}>
+                <Typography variant={ 'h3' }>
+                  {
+                    asset.maxApr
+                      ? (asset.maxApr * 100).toFixed(4) + ' %'
+                      : '0.0000 %'
+                  }
+                </Typography>
+                <Typography variant={ 'h5' } className={ classes.grey }>{ t('InvestSimple.InterestRate') }</Typography>
+              </div>
+              <div className={classes.heading}>
+                <Typography variant={ 'h3' }>
+                  {
+                    asset.balance
+                      ? (asset.balance).toFixed(4) + ' ' + (asset.tokenSymbol ? asset.tokenSymbol : asset.symbol)
+                      : '0.0000 ' + (asset.tokenSymbol ? asset.tokenSymbol : asset.symbol)
+                  }
+                </Typography>
+                <Typography variant={ 'h5' } className={ classes.grey }>{ t('InvestSimple.AvailableBalance') }</Typography>
+              </div>
+            </div>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Asset asset={ asset } startLoading={ this.startLoading } />
+          </AccordionDetails>
+        </Accordion>
       )
     })
   }
@@ -458,34 +619,6 @@ class InvestSimple extends Component {
     } = this.state
     return <Snackbar type={ snackbarType } message={ snackbarMessage } open={true}/>
   };
-
-  renderModal = () => {
-    return (
-      <UnlockModal closeModal={ this.closeModal } modalOpen={ this.state.modalOpen } />
-    )
-  }
-
-  renderInvestAllModal = () => {
-    return (
-      <InvestAllModal closeModal={ this.closeInvestAllModal } modalOpen={ this.state.modalInvestAllOpen } assets={ this.state.assets } />
-    )
-  }
-
-  overlayClicked = () => {
-    this.setState({ modalOpen: true })
-  }
-
-  closeModal = () => {
-    this.setState({ modalOpen: false })
-  }
-
-  investAllClicked = () => {
-    this.setState({ modalInvestAllOpen: true })
-  }
-
-  closeInvestAllModal = () => {
-    this.setState({ modalInvestAllOpen: false })
-  }
 }
 
 export default withNamespaces()(withRouter(withStyles(styles)(InvestSimple)));

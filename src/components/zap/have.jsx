@@ -7,9 +7,8 @@ import {
   TextField
 } from '@material-ui/core';
 
-// import {
-//   BALANCES_RETURNED
-// } from '../../constants'
+import { withNamespaces } from 'react-i18next';
+import { colors } from '../../theme'
 
 import Store from "../../stores";
 // const emitter = Store.emitter
@@ -30,7 +29,8 @@ const styles = theme => ({
   },
   inputCardHeading: {
     width: '100%',
-    padding: '12px 0px 12px 20px'
+    paddingLeft: '20px',
+    color: colors.darkGray
   },
   assetSelectRoot: {
     borderRadius: '1.25rem'
@@ -62,13 +62,10 @@ const styles = theme => ({
     alignItems: 'center'
   },
   balances: {
-    marginBottom: '-25px',
-    marginRight: '30px',
-    zIndex: '900',
-    display: 'flex',
-    alignItems: 'center',
     width: '100%',
-    justifyContent: 'space-between'
+    textAlign: 'right',
+    paddingRight: '20px',
+    cursor: 'pointer'
   },
   title: {
     paddingRight: '24px'
@@ -80,8 +77,11 @@ class Have extends Component {
   constructor(props) {
     super()
 
-    const a = props.assets.filter((asset) => { return asset.balance > 0 }).map((asset) => asset.symbol)
-    const b = props.curveContracts.filter((asset) => { return asset.balance > 0 }).map((asset) => asset.symbol)
+    // const a = props.assets.filter((asset) => { return asset.balance > 0 })
+    // const b = props.curveContracts.filter((asset) => { return asset.balance > 0 })
+
+    const a = props.assets
+    const b = props.curveContracts
 
     this.state = {
       asset: '',
@@ -95,14 +95,18 @@ class Have extends Component {
   componentWillReceiveProps(props) {
     if(props.assets && props.curveContracts) {
       const _asset = this.state.asset?this.state.asset:props.assets[0].symbol
-      const a = props.assets.filter((asset) => { return asset.balance > 0 }).map((asset) => asset.symbol)
-      const b = props.curveContracts.filter((asset) => { return asset.balance > 0 }).map((asset) => asset.symbol)
+      // const a = props.assets.filter((asset) => { return asset.balance > 0 })
+      // const b = props.curveContracts.filter((asset) => { return asset.balance > 0 })
+
+      const a = props.assets
+      const b = props.curveContracts
+
       this.setState({ assetOptions: [...a, ...b], assets: props.assets, curveContracts: props.curveContracts, asset: _asset })
     }
   }
 
   render() {
-    const { classes, sendAsset } = this.props;
+    const { classes, sendAsset, t } = this.props;
     const {
       asset,
       assetOptions,
@@ -112,7 +116,7 @@ class Have extends Component {
     return (
       <div className={ classes.root }>
         <div className={ classes.inputCard }>
-          <Typography variant='h3' className={ classes.inputCardHeading }>I have</Typography>
+          <Typography variant='h3' className={ classes.inputCardHeading }>{ t("Zap.IHave") }</Typography>
           <div className={ classes.tradeContainer }>
             { sendAsset && <div className={ classes.balances }>
                 <Typography variant='h3' className={ classes.title }></Typography><Typography variant='h4' onClick={ () => { this.props.setSendAmountPercent(100) } } className={ classes.value } noWrap>{ 'Balance: '+ ( sendAsset.balance ? sendAsset.balance.toFixed(4) : '0.0000') } { sendAsset.tokenSymbol ? sendAsset.tokenSymbol : sendAsset.symbol }</Typography>
@@ -140,9 +144,9 @@ class Have extends Component {
         asset = asset[0]
       } else {
         asset = {
-          id: 'CRV',
+          id: 'crvV4',
           name: 'Curve.fi yDAI+yUSDC+yUSDT+yTUSD',
-          symbol: 'Curve.fi',
+          symbol: 'Curve.fi V4',
           balance: store.getStore('curvBalance')
         }
       }
@@ -157,7 +161,7 @@ class Have extends Component {
 
   renderAssetSelect = (id, value, options, error) => {
 
-    const { classes, loading } = this.props
+    const { loading, classes } = this.props
 
     return (
       <TextField
@@ -172,6 +176,7 @@ class Have extends Component {
         variant="outlined"
         fullWidth
         disabled={ loading }
+        className={ classes.assetSelectRoot }
       >
         { /* this.renderAssetOption('CRV') */ }
         { options ? options.map(this.renderAssetOption) : null }
@@ -184,17 +189,17 @@ class Have extends Component {
     const { classes } = this.props
 
     return (
-      <MenuItem key={option} value={option} className={ classes.assetSelectMenu }>
+      <MenuItem key={option.id} value={option.symbol} className={ classes.assetSelectMenu }>
         <React.Fragment>
           <div className={ classes.assetSelectIcon }>
             <img
               alt=""
-              src={ require('../../assets/'+(['Curve.fi V1', 'Curve.fi V2', 'Curve.fi V3'].includes(option) ? 'CRV' : option)+'-logo.png') }
+              src={ require('../../assets/'+(['crvV1', 'crvV2', 'crvV3', 'crvV4'].includes(option.id) ? 'CRV' : option.symbol)+'-logo.png') }
               height="30px"
             />
           </div>
           <div className={ classes.assetSelectIconName }>
-            <Typography variant='h2'>{ option }</Typography>
+            <Typography variant='h4'>{ option.symbol }</Typography>
           </div>
         </React.Fragment>
       </MenuItem>
@@ -202,4 +207,4 @@ class Have extends Component {
   }
 }
 
-export default withRouter(withStyles(styles)(Have));
+export default withNamespaces()(withRouter(withStyles(styles)(Have)));

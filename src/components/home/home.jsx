@@ -4,21 +4,14 @@ import { withStyles } from '@material-ui/core/styles';
 import {
   Card,
   Typography,
-  Button,
-  ExpansionPanel,
-  ExpansionPanelDetails,
-  ExpansionPanelSummary,
-  Switch
 } from '@material-ui/core';
 import { withNamespaces } from 'react-i18next';
 import { colors } from '../../theme'
 import FlashOnIcon from '@material-ui/icons/FlashOn';
 import AttachMoneyIcon from '@material-ui/icons/AttachMoney';
-import SecurityIcon from '@material-ui/icons/Security';
 import BarChartIcon from '@material-ui/icons/BarChart';
-import {
-  Link
-} from "react-router-dom";
+import PieChartIcon from '@material-ui/icons/PieChart';
+import SecurityIcon from '@material-ui/icons/Security';
 
 const styles = theme => ({
   root: {
@@ -42,9 +35,9 @@ const styles = theme => ({
     flexDirection: 'column',
     cursor: 'pointer',
     borderRadius: '0px',
+    transition: 'background-color 0.2s linear',
     [theme.breakpoints.up('sm')]: {
       height: '100vh',
-      minWidth: '20%',
       minHeight: '50vh',
     }
   },
@@ -57,6 +50,12 @@ const styles = theme => ({
       },
       '& .icon': {
         color: colors.white
+      },
+      '& .description': {
+        display: 'block',
+        color: colors.white,
+        padding: '48px',
+        textAlign: 'center'
       }
     },
     '& .title': {
@@ -64,6 +63,9 @@ const styles = theme => ({
     },
     '& .icon': {
       color: colors.pink
+    },
+    '& .description': {
+      display: 'none'
     }
   },
   zap: {
@@ -71,18 +73,32 @@ const styles = theme => ({
     '&:hover': {
       backgroundColor: colors.blue,
       '& .title': {
-        color: colors.white
+        color: colors.white,
       },
       '& .icon': {
         color: colors.white
+      },
+      '& .description': {
+        display: 'block',
+        color: colors.white,
+        padding: '48px',
+        textAlign: 'center'
       }
     },
     '& .title': {
-      color: colors.blue
+      color: colors.blue,
+      display: 'block'
+    },
+    '& .soon': {
+      color: colors.blue,
+      display: 'none'
     },
     '& .icon': {
       color: colors.blue
     },
+    '& .description': {
+      display: 'none'
+    }
   },
   apr: {
     backgroundColor: colors.white,
@@ -93,6 +109,12 @@ const styles = theme => ({
       },
       '& .icon': {
         color: colors.white
+      },
+      '& .description': {
+        display: 'block',
+        color: colors.white,
+        padding: '48px',
+        textAlign: 'center'
       }
     },
     '& .title': {
@@ -101,6 +123,36 @@ const styles = theme => ({
     '& .icon': {
       color: colors.lightBlack
     },
+    '& .description': {
+      display: 'none'
+    }
+  },
+  vault: {
+    backgroundColor: colors.white,
+    '&:hover': {
+      backgroundColor: colors.tomato,
+      '& .title': {
+        color: colors.white,
+      },
+      '& .icon': {
+        color: colors.white
+      },
+      '& .description': {
+        display: 'block',
+        color: colors.white,
+        padding: '48px',
+        textAlign: 'center'
+      }
+    },
+    '& .title': {
+      color: colors.tomato,
+    },
+    '& .icon': {
+      color: colors.tomato
+    },
+    '& .description': {
+      display: 'none'
+    }
   },
   cover: {
     backgroundColor: colors.white,
@@ -111,6 +163,12 @@ const styles = theme => ({
       },
       '& .icon': {
         color: colors.white
+      },
+      '& .description': {
+        display: 'block',
+        color: colors.white,
+        padding: '48px',
+        textAlign: 'center'
       }
     },
     '& .title': {
@@ -119,6 +177,9 @@ const styles = theme => ({
     '& .icon': {
       color: colors.compoundGreen
     },
+    '& .description': {
+      display: 'none'
+    }
   },
   title: {
     padding: '24px',
@@ -148,29 +209,39 @@ class Home extends Component {
   }
 
   render() {
-    console.log(this.props)
-    const { classes, t } = this.props;
-    const {
-      account,
-    } = this.state
+    const { classes, t, location } = this.props;
 
     return (
       <div className={ classes.root }>
-        <Card className={ `${classes.card} ${classes.earn}` } onClick={ () => { this.nav('/earn') } }>
-          <AttachMoneyIcon className={ `${classes.icon} icon` } />
-          <Typography variant={'h1'} className={ `${classes.title} title` }>Earn</Typography>
-        </Card>
-        <Card className={ `${classes.card} ${classes.zap}` } onClick={ () => { this.nav('/zap') } }>
-          <FlashOnIcon className={ `${classes.icon} icon` } />
-          <Typography variant={'h1'} className={ `${classes.title} title` }>Zap</Typography>
-        </Card>
-        <Card className={ `${classes.card} ${classes.apr}` } onClick={ () => { this.nav('/apr') } }>
+        <Card className={ `${classes.card} ${classes.apr}` } onClick={ () => { this.nav(location.pathname+'dashboard') } }>
           <BarChartIcon className={ `${classes.icon} icon` } />
-          <Typography variant={'h1'} className={ `${classes.title} title` }>APR</Typography>
+          <Typography variant={'h3'} className={ `${classes.title} title` }>Dashboard</Typography>
+          <Typography variant={'h4'} className={ `${classes.description} description` }>{ "Get a quick glance at how your portfolio is growing while invested in yearn's products." }</Typography>
         </Card>
-        <Card className={ `${classes.card} ${classes.cover}` } onClick={ () => { this.nav('/cover') }}>
+        <Card className={ `${classes.card} ${classes.vault}` } onClick={ () => { this.nav(location.pathname+'vaults') }}>
+          <PieChartIcon className={ `${classes.icon} icon` } />
+          <Typography variant={'h3'} className={ `${classes.title} title` }>{ t("Home.Vaults") }</Typography>
+          <Typography variant={'h4'} className={ `${classes.description} description` }>{ "Vaults follow unique strategies that are designed to maximize the yield of the deposited asset and minimize risk." }</Typography>
+        </Card>
+        <Card className={ `${classes.card} ${classes.earn}` } onClick={ () => { this.nav(location.pathname+'earn') } }>
+          <AttachMoneyIcon className={ `${classes.icon} icon` } />
+          <Typography variant={'h3'} className={ `${classes.title} title` }>{ t("Home.Earn") }</Typography>
+          <Typography variant={'h4'} className={ `${classes.description} description` }>{ "Earn performs profit switching for lending providers, moving your funds between dydx, Aave, Compound autonomously." }</Typography>
+        </Card>
+        <Card className={ `${classes.card} ${classes.zap}` } onClick={ () => { this.nav(location.pathname+'zap') } }>
+          <FlashOnIcon className={ `${classes.icon} icon` } />
+          <Typography variant={'h3'} className={ `${classes.title} title` }>{ t("Home.Zap") }</Typography>
+          <Typography variant={'h4'} className={ `${classes.description} description` }>{ "Zaps help you save on gas fees. Zap directly into or out of Curve pools from the base assets." }</Typography>
+        </Card>
+        <Card className={ `${classes.card} ${classes.cover}` } onClick={ () => { window.open("https://yinsure.finance", "_blank") } }>
           <SecurityIcon className={ `${classes.icon} icon` } />
-          <Typography variant={'h1'} className={ `${classes.title} title` }>Cover</Typography>
+          <Typography variant={'h3'} className={ `${classes.title} title` }>{ t("Home.Cover") }</Typography>
+          <Typography variant={'h4'} className={ `${classes.description} description` }>{ "Get cover with Nexus Mutual from yinsure.finance" }</Typography>
+        </Card>
+        <Card className={ `${classes.card} ${classes.apr}` } onClick={ () => { this.nav(location.pathname+'stats') } }>
+          <BarChartIcon className={ `${classes.icon} icon` } />
+          <Typography variant={'h3'} className={ `${classes.title} title` }>Stats</Typography>
+          <Typography variant={'h4'} className={ `${classes.description} description` }>{ "Get a quick glance at how yearn's vaults are performing." }</Typography>
         </Card>
       </div>
     )
